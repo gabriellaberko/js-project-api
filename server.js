@@ -32,9 +32,17 @@ app.get("/messages/date/:date", (req, res) => {
 });
 
 // Message with a specific ID
-app.get("/message/id/:id", (req, res) => {
+app.get("/messages/id/:id", (req, res) => {
   const id = req.params.id;
-  const messageOfId = data.filter((message) => message._id === id);
+  const messageOfId = data.find((message) => message._id === id);
+  
+  if(!messageOfId) {
+    return res.status(404).json({
+      error: "Message not found",
+      requestedId: id
+    });
+  }
+
   res.json(messageOfId);
 });
 
