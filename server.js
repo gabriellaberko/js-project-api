@@ -13,7 +13,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Start defining your routes here
+
+/* ---  ROUTES --- */
+
+
 app.get("/", (req, res) => {
   const endpoints = expressListEndpoints(app);
   res.send(endpoints);
@@ -23,19 +26,45 @@ app.get("/", (req, res) => {
 // All messages (with pagination)
 app.get("/messages", (req, res) => {
 
-  // Functionality for pagination
+  let messages = [ ...data ]; // To not mutate original array
+
+  /* --- Functionality for sorting --- */
+    const { sort, order } = req.query;
+    
+    if(sort === "date") {
+      messages.sort((a,b) => {
+        if(order === "desc") {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        } else if(order === "asc") {
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+      });
+    }
+
+    if(sort === "likes") {
+      messages.sort((a,b) => {
+        if(order === "desc") {
+          return b.hearts - a.hearts;
+        } else if(order === "asc") {
+          return a.hearts - b.hearts;
+        }
+      });
+    }
+
+  /* --- Functionality for pagination --- */
     const page = Number(req.query.page) || 1 ; // Query param
-    const numOfTotalMessages = data.length;
+    const numOfTotalMessages = messages.length;
     const messagesPerPage = 10;
     const numOfPages = Math.ceil(numOfTotalMessages / messagesPerPage); // Always round the result up, so there will be an extra page for any remainder
 
-    // Define where to split the array of messages for each page
+    // Define where to slice the array of messages for each page
     const start = (page - 1) * messagesPerPage;
     const end = start + messagesPerPage;
 
-    const pageResults = data.slice(start, end);
+    const pageResults = messages.slice(start, end);
     res.json({page, numOfPages, numOfTotalMessages, pageResults});
 });
+
 
 // Messages for a specific date
 app.get("/messages/date/:date", (req, res) => {
@@ -44,20 +73,21 @@ app.get("/messages/date/:date", (req, res) => {
   res.json(messagesFromDate);
 });
 
+
 // Message with a specific ID
 app.get("/messages/id/:id", (req, res) => {
   const id = req.params.id;
-  const messageOfId = data.find((message) => message._id === id);
+  const message = data.find((message) => message._id === id);
   
-  if(!messageOfId) {
+  if(!message) {
     return res.status(404).json({
-      error: "Message not found",
-      requestedId: id
+      error: `Message with id ${id} not found`
     });
   }
 
-  res.json(messageOfId);
+  res.json(message);
 });
+
 
 //Start the server
 app.listen(port, () => {
