@@ -19,9 +19,22 @@ app.get("/", (req, res) => {
   res.send(endpoints);
 })
 
-// All messages
+
+// All messages (with pagination)
 app.get("/messages", (req, res) => {
-  res.json(data);
+
+  // Functionality for pagination
+    const page = Number(req.query.page) || 1 ; // Query param
+    const numOfTotalMessages = data.length;
+    const messagesPerPage = 10;
+    const numOfPages = Math.ceil(numOfTotalMessages / messagesPerPage); // Always round the result up, so there will be an extra page for any remainder
+
+    // Define where to split the array of messages for each page
+    const start = (page - 1) * messagesPerPage;
+    const end = start + messagesPerPage;
+
+    const pageResults = data.slice(start, end);
+    res.json({page, numOfPages, numOfTotalMessages, pageResults});
 });
 
 // Messages for a specific date
@@ -46,7 +59,7 @@ app.get("/messages/id/:id", (req, res) => {
   res.json(messageOfId);
 });
 
-// Start the server
+//Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
