@@ -48,20 +48,20 @@ app.get("/messages", (req, res) => {
     
     if(sort === "date") {
       messages.sort((a,b) => {
-        if(order === "desc") {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        } else if(order === "asc") {
+        if(order === "asc") {
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        } else {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // Default to desc
         }
       });
     }
 
     if(sort === "likes") {
       messages.sort((a,b) => {
-        if(order === "desc") {
-          return b.hearts - a.hearts;
-        } else if(order === "asc") {
+        if(order === "asc") {
           return a.hearts - b.hearts;
+        } else {
+          return b.hearts - a.hearts; // Default to desc
         }
       });
     }
