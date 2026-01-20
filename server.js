@@ -19,7 +19,11 @@ app.use(express.json());
 
 app.get("/", (req, res) => {
   const endpoints = expressListEndpoints(app);
-  res.send(endpoints);
+  res.json({
+    message: "Welcome to the Happy Thoughts API",
+    endpoints: endpoints
+  });
+
 })
 
 
@@ -27,6 +31,17 @@ app.get("/", (req, res) => {
 app.get("/messages", (req, res) => {
 
   let messages = [ ...data ]; // To not mutate original array
+
+  /* --- Functionality for filtering --- */
+    const { fromDate, minLikes } = req.query;
+
+    if(fromDate) {
+      messages = messages.filter((message) => message.createdAt.slice(0, 10) > fromDate);
+    }
+    if(minLikes) {
+      messages = messages.filter((message) => message.hearts >= Number(minLikes));
+    }
+
 
   /* --- Functionality for sorting --- */
     const { sort, order } = req.query;
@@ -93,4 +108,3 @@ app.get("/messages/id/:id", (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
-
