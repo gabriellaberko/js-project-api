@@ -28,6 +28,7 @@ app.use((req, res, next) => {
 
 /* ---  Routes --- */
 
+
 app.get("/", (req, res) => {
   const endpoints = expressListEndpoints(app);
   res.json({
@@ -37,10 +38,34 @@ app.get("/", (req, res) => {
 
 })
 
+
+// All thoughts
 app.get("/thoughts", async (req, res) => {
   const thoughts = await Thought.find();
   res.json(thoughts);
 });
+
+
+// Delete a thought
+app.delete("/thoughts/id/:id", async (req, res) => {
+  const id = req.params.id;
+
+  // Error handling for invalid id input
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(400).json({ error: `Invalid id: ${id}` });
+  }
+
+  const deletedThought = await Thought.findById(id);
+
+  // Error handling for no ID match
+  if(!deletedThought) {
+    return res.status(404).json({
+      error: `Thought with id ${id} not found`
+    });
+  }
+  res.status(200).json(deletedThought);
+});
+
 
 app.post("/thoughts", async (req, res) => {
   // Retrieve the information sent by the client to our API endpoint
@@ -56,6 +81,8 @@ app.post("/thoughts", async (req, res) => {
   }
 });
 
+
+/* --- Old routes for statix json file --- */
 
 // All messages (with pagination)
 app.get("/messages", (req, res) => {
@@ -148,17 +175,3 @@ mongoose.connect(mongoUrl)
     });
   })
   .catch(err => console.error('MongoDB connection error:', err));
-
-
-// /* --- Connect to Mongo --- */
-// const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts";
-// mongoose.connect(mongoUrl)
-//   .then(() => console.log('MongoDB connected'))
-//   .catch(err => console.error('MongoDB connection error:', err));
-// mongoose.Promise = Promise; // optional (legacy)
-
-
-// /* --- Start the server --- */
-// app.listen(port, () => {
-//   console.log(`Server running on http://localhost:${port}`);
-// });

@@ -3,7 +3,7 @@ import Thought from "./models/Thought"
 export const seedDatabase = async () => {
   await Thought.deleteMany() // To not have duplicates every time this function runs
 
-  /* --- Using the models created to add data (Thoughts) --- */
+  /* --- Using the models created to add data --- */
 
   await new Thought({ message: "Berlin baby", hearts: 37, createdAt: "2025-05-19T22:07:08.999Z" }).save();
   await new Thought({ message: "My family!", createdAt: "2025-05-22T22:29:32.232Z" }).save();
