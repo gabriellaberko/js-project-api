@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 
-/* --- Error handling to check database (MongoDB) connection --- */
+/* --- Error handling to check database connection --- */
 app.use((req, res, next) => {
   if(mongoose.connection.readyState === 1) { // 1 is connected
     next(); // Continue on executing what comes after
@@ -35,8 +35,7 @@ app.get("/", (req, res) => {
     message: "Welcome to the Happy Thoughts API",
     endpoints: endpoints
   });
-
-})
+});
 
 
 // All thoughts
@@ -55,15 +54,49 @@ app.delete("/thoughts/id/:id", async (req, res) => {
   return res.status(400).json({ error: `Invalid id: ${id}` });
   }
 
-  const deletedThought = await Thought.findById(id);
+  try {
+    const deletedThought = await Thought.findById(id);
 
-  // Error handling for no ID match
-  if(!deletedThought) {
-    return res.status(404).json({
-      error: `Thought with id ${id} not found`
-    });
+    // Error handling for no ID match
+    if(!deletedThought) {
+      return res.status(404).json({error: `Thought with id ${id} not found`});
+    }
+
+    res.json(deletedThought);
+
+  } catch(err) {
+    res.status(500).json({error: err.message});
   }
-  res.status(200).json(deletedThought);
+});
+
+
+// Update the message of a thought
+app.patch("/thoughts/id/:id", async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+
+  // Error handling for invalid id input
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(400).json({ error: `Invalid id: ${id}` });
+  }
+
+  try {
+    const updatedThought = await Thought.findByIdAndUpdate(
+      id, 
+      { message }, 
+      { new: true, runValidators: true} //Ensures the updated message gets returned, and that schema validation also is performed on the new message
+    );
+    
+    // Error handling for no ID match
+    if(!updatedThought) {
+      return res.status(404).json({error: `Thought with id ${id} not found`});
+    }
+
+    res.json(updatedThought);
+
+  } catch(err) {
+    res.status(500).json({error: err.message});
+  }
 });
 
 
@@ -123,7 +156,7 @@ app.get("/messages", (req, res) => {
     }
 
   /* --- Functionality for pagination --- */
-    const page = Number(req.query.page) || 1 ; // Query param
+    const page = Number(req.query.page) || 1;
     const numOfTotalMessages = messages.length;
     const messagesPerPage = 10;
     const numOfPages = Math.ceil(numOfTotalMessages / messagesPerPage); // Always round the result up, so there will be an extra page for any remainder
