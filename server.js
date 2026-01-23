@@ -55,7 +55,7 @@ app.delete("/thoughts/id/:id", async (req, res) => {
   }
 
   try {
-    const deletedThought = await Thought.findById(id);
+    const deletedThought = await Thought.findByIdAndDelete(id);
 
     // Error handling for no ID match
     if(!deletedThought) {
