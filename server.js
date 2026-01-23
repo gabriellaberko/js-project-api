@@ -42,20 +42,44 @@ app.get("/", (req, res) => {
 app.get("/thoughts", async (req, res) => {
   
   /* --- Functionality for filtering --- */
+    const filterCriteria = {}; // To use as argument in Model.find(). Will be a criteria or object (thus retrieving all thoughts)
     const { fromDate, minLikes } = req.query;
-    const filter = {}; // To use as argument in Model.find(). Will be a criteria or object (thus retrieving all thoughts)
 
     //Filter on minimum of likes
     if(minLikes){
-      filter.hearts = { $gte: Number(minLikes) }; //gte = greater than or equal to
+      filterCriteria.hearts = { $gte: Number(minLikes) }; //gte = greater than or equal to
     }
 
     // Filter from a date
     if(fromDate) {
-      filter.createdAt = { $gte: new Date(fromDate) }; 
+      filterCriteria.createdAt = { $gte: new Date(fromDate) }; 
     }
-  
-  const thoughts = await Thought.find(filter);
+
+  /* --- Functionality for sorting --- */
+    const sortCriteria = {};
+    const { sortBy, order } = req.query;
+    const sortingOrder = order === "asc" ? 1 : -1;
+
+    // Translate to keep readable query parameters in the URL
+    let sort = sortBy;
+    if (sortBy === "date") {
+      sort = "createdAt";
+    }
+    if (sortBy === "likes") {
+      sort = "hearts";
+    }
+
+    if(sort){
+    // Set the key-value pair in the object sortCriteria dynamically - obj[key] = value
+    sortCriteria[sort] = sortingOrder; // Set the key to the value of sort and its value to sortingOrder
+      if (sort !== "createdAt") {
+        sortCriteria.createdAt = -1; // Puts creation date as secondary sorting
+      }
+    } else {
+      sortCriteria.createdAt = -1; // Creation date as default sorting
+    }
+
+  const thoughts = await Thought.find(filterCriteria).sort(sortCriteria);
   res.json(thoughts);
 });
 
@@ -130,82 +154,82 @@ app.post("/thoughts", async (req, res) => {
 });
 
 
-/* --- Old routes for statix json file --- */
+// /* --- Old routes for statix json file --- */
 
-// All messages (with pagination)
-app.get("/messages", (req, res) => {
+// // All messages (with pagination)
+// app.get("/messages", (req, res) => {
 
-  let messages = [ ...data ]; // To not mutate original array
+//   let messages = [ ...data ]; // To not mutate original array
 
-  /* --- Functionality for filtering --- */
-    const { fromDate, minLikes } = req.query;
+//   /* --- Functionality for filtering --- */
+//     const { fromDate, minLikes } = req.query;
 
-    if(fromDate) {
-      messages = messages.filter((message) => message.createdAt.slice(0, 10) > fromDate);
-    }
-    if(minLikes) {
-      messages = messages.filter((message) => message.hearts >= Number(minLikes));
-    }
+//     if(fromDate) {
+//       messages = messages.filter((message) => message.createdAt.slice(0, 10) > fromDate);
+//     }
+//     if(minLikes) {
+//       messages = messages.filter((message) => message.hearts >= Number(minLikes));
+//     }
 
-  /* --- Functionality for sorting --- */
-    const { sort, order } = req.query;
+//   /* --- Functionality for sorting --- */
+//     const { sort, order } = req.query;
     
-    if(sort === "date") {
-      messages.sort((a,b) => {
-        if(order === "asc") {
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        } else {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // Default to desc
-        }
-      });
-    }
+//     if(sort === "date") {
+//       messages.sort((a,b) => {
+//         if(order === "asc") {
+//           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+//         } else {
+//           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // Default to desc
+//         }
+//       });
+//     }
 
-    if(sort === "likes") {
-      messages.sort((a,b) => {
-        if(order === "asc") {
-          return a.hearts - b.hearts;
-        } else {
-          return b.hearts - a.hearts; // Default to desc
-        }
-      });
-    }
+//     if(sort === "likes") {
+//       messages.sort((a,b) => {
+//         if(order === "asc") {
+//           return a.hearts - b.hearts;
+//         } else {
+//           return b.hearts - a.hearts; // Default to desc
+//         }
+//       });
+//     }
 
-  /* --- Functionality for pagination --- */
-    const page = Number(req.query.page) || 1;
-    const numOfTotalMessages = messages.length;
-    const messagesPerPage = 10;
-    const numOfPages = Math.ceil(numOfTotalMessages / messagesPerPage); // Always round the result up, so there will be an extra page for any remainder
+//   /* --- Functionality for pagination --- */
+//     const page = Number(req.query.page) || 1;
+//     const numOfTotalMessages = messages.length;
+//     const messagesPerPage = 10;
+//     const numOfPages = Math.ceil(numOfTotalMessages / messagesPerPage); // Always round the result up, so there will be an extra page for any remainder
 
-    // Define where to slice the array of messages for each page
-    const start = (page - 1) * messagesPerPage;
-    const end = start + messagesPerPage;
+//     // Define where to slice the array of messages for each page
+//     const start = (page - 1) * messagesPerPage;
+//     const end = start + messagesPerPage;
 
-    const pageResults = messages.slice(start, end);
-    res.json({page, numOfPages, numOfTotalMessages, pageResults});
-});
-
-
-// Messages for a specific date
-app.get("/messages/date/:date", (req, res) => {
-  const date = req.params.date;
-  const messagesFromDate = data.filter((message) => message.createdAt.slice(0, 10) === date); // createdAt needs to match format "YYYY-MM-DD"
-  res.json(messagesFromDate);
-});
+//     const pageResults = messages.slice(start, end);
+//     res.json({page, numOfPages, numOfTotalMessages, pageResults});
+// });
 
 
-// Message with a specific ID
-app.get("/messages/id/:id", (req, res) => {
-  const id = req.params.id;
-  const message = data.find((message) => message._id === id);
+// // Messages for a specific date
+// app.get("/messages/date/:date", (req, res) => {
+//   const date = req.params.date;
+//   const messagesFromDate = data.filter((message) => message.createdAt.slice(0, 10) === date); // createdAt needs to match format "YYYY-MM-DD"
+//   res.json(messagesFromDate);
+// });
+
+
+// // Message with a specific ID
+// app.get("/messages/id/:id", (req, res) => {
+//   const id = req.params.id;
+//   const message = data.find((message) => message._id === id);
   
-  if(!message) {
-    return res.status(404).json({
-      error: `Message with id ${id} not found`
-    });
-  }
+//   if(!message) {
+//     return res.status(404).json({
+//       error: `Message with id ${id} not found`
+//     });
+//   }
 
-  res.json(message);
-});
+//   res.json(message);
+// });
 
 
 /* --- Connect to Mongo --- */
