@@ -40,7 +40,22 @@ app.get("/", (req, res) => {
 
 // All thoughts
 app.get("/thoughts", async (req, res) => {
-  const thoughts = await Thought.find();
+  
+  /* --- Functionality for filtering --- */
+    const { fromDate, minLikes } = req.query;
+    const filter = {}; // To use as argument in Model.find(). Will be a criteria or object (thus retrieving all thoughts)
+
+    //Filter on minimum of likes
+    if(minLikes){
+      filter.hearts = { $gte: Number(minLikes) }; //gte = greater than or equal to
+    }
+
+    // Filter from a date
+    if(fromDate) {
+      filter.createdAt = { $gte: new Date(fromDate) }; 
+    }
+  
+  const thoughts = await Thought.find(filter);
   res.json(thoughts);
 });
 
