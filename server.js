@@ -2,10 +2,12 @@ import cors from "cors";
 import express from "express";
 import data from "./data.json";
 import expressListEndpoints from "express-list-endpoints";
+import mongoose from "mongoose";
+import Thought from "./models/Thought";
+import { seedDatabase } from "./seedDatabase";
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
-// when starting the server. Example command to overwrite PORT env variable value:
-// PORT=9000 npm start
+// when starting the server. Example command to overwrite PORT env variable value: PORT=9000 npm start
 const port = process.env.PORT || 8080;
 const app = express();
 
@@ -14,8 +16,17 @@ app.use(cors());
 app.use(express.json());
 
 
-/* ---  ROUTES --- */
+/* --- Error handling to check database (MongoDB) connection --- */
+app.use((req, res, next) => {
+  if(mongoose.connection.readyState === 1) { // 1 is connected
+    next(); // Continue on executing what comes after
+  } else {
+    res.status(503).json({error: "Service unavailable"});
+  }
+});
 
+
+/* ---  Routes --- */
 
 app.get("/", (req, res) => {
   const endpoints = expressListEndpoints(app);
@@ -25,6 +36,25 @@ app.get("/", (req, res) => {
   });
 
 })
+
+app.get("/thoughts", async (req, res) => {
+  const thoughts = await Thought.find();
+  res.json(thoughts);
+});
+
+app.post("/thoughts", async (req, res) => {
+  // Retrieve the information sent by the client to our API endpoint
+  const message = req.body.message;
+  // Use our mongoose model to create the database entry
+  const thought = new Thought({ message });
+
+  try {
+    const savedThought = await thought.save();
+    res.status(200).json(savedThought);
+  } catch(err) {
+    res.status(400).json({message: "Failed to save thought to database", error: err.errors});
+  }
+});
 
 
 // All messages (with pagination)
@@ -41,7 +71,6 @@ app.get("/messages", (req, res) => {
     if(minLikes) {
       messages = messages.filter((message) => message.hearts >= Number(minLikes));
     }
-
 
   /* --- Functionality for sorting --- */
     const { sort, order } = req.query;
@@ -104,7 +133,32 @@ app.get("/messages/id/:id", (req, res) => {
 });
 
 
-//Start the server
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+/* --- Connect to Mongo --- */
+const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts";
+mongoose.connect(mongoUrl)
+  .then(async () => { 
+    console.log('MongoDB connected');
+
+    
+    await seedDatabase(); // Temporary seeding (add async & await)
+
+    // Start the server
+    app.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}`);
+    });
+  })
+  .catch(err => console.error('MongoDB connection error:', err));
+
+
+// /* --- Connect to Mongo --- */
+// const mongoUrl = process.env.MONGO_URL || "mongodb://localhost/thoughts";
+// mongoose.connect(mongoUrl)
+//   .then(() => console.log('MongoDB connected'))
+//   .catch(err => console.error('MongoDB connection error:', err));
+// mongoose.Promise = Promise; // optional (legacy)
+
+
+// /* --- Start the server --- */
+// app.listen(port, () => {
+//   console.log(`Server running on http://localhost:${port}`);
+// });
