@@ -79,7 +79,11 @@ app.get("/thoughts", async (req, res) => {
       sortCriteria.createdAt = -1; // Creation date as default sorting
     }
 
-  const thoughts = await Thought.find(filterCriteria).sort(sortCriteria);
+  const thoughts = await Thought
+    .find(filterCriteria)
+    .sort(sortCriteria)
+    .select("-editToken") // to exclude editToken from being exposed to users
+  ;
   res.json(thoughts);
 });
 
@@ -93,9 +97,9 @@ app.post("/thoughts", async (req, res) => {
 
   try {
     const savedThought = await thought.save();
-    res.status(200).json(savedThought);
+    res.status(201).json(savedThought);
   } catch(err) {
-    res.status(400).json({message: "Failed to save thought to database", error: err.errors});
+    res.status(400).json({message: "Failed to save thought to database", error: err.message});
   }
 });
 

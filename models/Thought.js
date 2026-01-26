@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const ThoughtSchema = mongoose.Schema({
+const ThoughtSchema = new mongoose.Schema({
   message: {
     type: String,
     required: true,
@@ -14,6 +14,10 @@ const ThoughtSchema = mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  editToken: {
+    type: String,
+    default: () => crypto.randomUUID()
   }
 });
 
