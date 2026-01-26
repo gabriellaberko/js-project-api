@@ -84,6 +84,22 @@ app.get("/thoughts", async (req, res) => {
 });
 
 
+// Post a thought
+app.post("/thoughts", async (req, res) => {
+  // Retrieve the information sent by the client to our API endpoint
+  const message = req.body.message;
+  // Use our mongoose model to create the database entry
+  const thought = new Thought({ message });
+
+  try {
+    const savedThought = await thought.save();
+    res.status(200).json(savedThought);
+  } catch(err) {
+    res.status(400).json({message: "Failed to save thought to database", error: err.errors});
+  }
+});
+
+
 // Delete a thought
 app.delete("/thoughts/id/:id", async (req, res) => {
   const id = req.params.id;
@@ -102,6 +118,36 @@ app.delete("/thoughts/id/:id", async (req, res) => {
     }
 
     res.json(deletedThought);
+
+  } catch(err) {
+    res.status(500).json({error: err.message});
+  }
+});
+
+
+// Update the like count of a thought
+app.patch("/thoughts/id/:id/like", async (req, res) => {
+  const { id } = req.params;
+  const { hearts } = req.body;
+
+  // Error handling for invalid id input
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(400).json({ error: `Invalid id: ${id}` });
+  }
+
+  try {
+    const updatedThought = await Thought.findByIdAndUpdate(
+      id, 
+      { hearts }, 
+      { new: true, runValidators: true} //Ensures the updated heart count gets returned, and that schema validation also is performed on the new message
+    );
+    
+    // Error handling for no ID match
+    if(!updatedThought) {
+      return res.status(404).json({error: `Thought with id ${id} not found`});
+    }
+
+    res.json(updatedThought);
 
   } catch(err) {
     res.status(500).json({error: err.message});
@@ -135,21 +181,6 @@ app.patch("/thoughts/id/:id", async (req, res) => {
 
   } catch(err) {
     res.status(500).json({error: err.message});
-  }
-});
-
-
-app.post("/thoughts", async (req, res) => {
-  // Retrieve the information sent by the client to our API endpoint
-  const message = req.body.message;
-  // Use our mongoose model to create the database entry
-  const thought = new Thought({ message });
-
-  try {
-    const savedThought = await thought.save();
-    res.status(200).json(savedThought);
-  } catch(err) {
-    res.status(400).json({message: "Failed to save thought to database", error: err.errors});
   }
 });
 
