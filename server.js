@@ -160,7 +160,7 @@ app.patch("/thoughts/id/:id/like", async (req, res) => {
 
 
 // Update the message of a thought
-app.patch("/thoughts/id/:id", async (req, res) => {
+app.patch("/thoughts/id/:id/message", async (req, res) => {
   const { id } = req.params;
   const { message } = req.body;
 
