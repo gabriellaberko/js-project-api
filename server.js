@@ -3,14 +3,28 @@ import express from "express";
 import expressListEndpoints from "express-list-endpoints";
 import mongoose from "mongoose";
 import Thought from "./models/Thought";
+import User from "./models/User";
 import { seedDatabase } from "./seedDatabase";
 import dotenv from "dotenv";
 dotenv.config();
+import bcrypt from "bcrypt-nodejs";
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 // when starting the server. Example command to overwrite PORT env variable value: PORT=9000 npm start
 const port = process.env.PORT || 8080;
 const app = express();
+
+// To be used in routes that should only be accessed by authorized users
+const authenticateUser = async (req, res, next) => {
+  const user = await User.findOne({ accessToken: req.header("Authorization") });
+  if(user) {
+    req.user = user;
+    next(); // Continue on executing what comes after
+  } else {
+    res.status(401).json({ loggedOut: true });
+  }
+};
+
 
 // Add middlewares to enable cors and json body parsing
 app.use(cors());
@@ -22,7 +36,7 @@ app.use((req, res, next) => {
   if(mongoose.connection.readyState === 1) { // 1 is connected
     next(); // Continue on executing what comes after
   } else {
-    res.status(503).json({error: "Service unavailable"});
+    res.status(503).json({ error: "Service unavailable" });
   }
 });
 
@@ -42,7 +56,7 @@ app.get("/", (req, res) => {
 app.get("/thoughts", async (req, res) => {
   
   /* --- Functionality for filtering --- */
-    const filterCriteria = {}; // To use as argument in Model.find(). Will be a criteria or object (thus retrieving all thoughts)
+    const filterCriteria = {}; // To use as argument in Model.find(). Will be a criteria or empty object (thus retrieving all thoughts)
     const { fromDate, minLikes } = req.query;
 
     //Filter on minimum of likes
@@ -90,16 +104,15 @@ app.get("/thoughts", async (req, res) => {
 
 // Post a thought
 app.post("/thoughts", async (req, res) => {
-  // Retrieve the information sent by the client to our API endpoint
   const message = req.body.message;
-  // Use our mongoose model to create the database entry
+  // Use mongoose model to create a database entry
   const thought = new Thought({ message });
 
   try {
     const savedThought = await thought.save();
     res.status(201).json(savedThought);
-  } catch(err) {
-    res.status(400).json({message: "Failed to save thought to database", error: err.message});
+  } catch(error) {
+    res.status(400).json({ message: "Failed to save thought to database", error: error.message });
   }
 });
 
@@ -118,13 +131,13 @@ app.delete("/thoughts/id/:id", async (req, res) => {
 
     // Error handling for no ID match
     if(!deletedThought) {
-      return res.status(404).json({error: `Thought with id ${id} not found`});
+      return res.status(404).json({ error: `Thought with id ${id} not found` });
     }
 
     res.json(deletedThought);
 
-  } catch(err) {
-    res.status(500).json({error: err.message});
+  } catch(error) {
+    res.status(500).json({error: error.message});
   }
 });
 
@@ -148,13 +161,13 @@ app.patch("/thoughts/id/:id/like", async (req, res) => {
     
     // Error handling for no ID match
     if(!updatedThought) {
-      return res.status(404).json({error: `Thought with id ${id} not found`});
+      return res.status(404).json({ error: `Thought with id ${id} not found` });
     }
 
     res.json(updatedThought);
 
-  } catch(err) {
-    res.status(500).json({error: err.message});
+  } catch(error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -185,6 +198,48 @@ app.patch("/thoughts/id/:id/message", async (req, res) => {
 
   } catch(err) {
     res.status(500).json({error: err.message});
+  }
+});
+
+
+// Create a new user (sign-up)
+app.post("/users", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    // Use mongoose model to create a database entry
+    const salt = bcrypt.genSaltSync();
+    const user = new User({ name, email, password: bcrypt.hashSync(password, salt) });
+    const savedUser = await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "User created",
+      id: user._id,
+      accessToken: user.accessToken
+    });
+  } catch(error) {
+    res.status(400).json({
+      success: false,
+      message: "Failed to create user", 
+      error: error.errors});
+  }
+});
+
+
+// Login
+app.post("/sessions", async (req, res) => {
+  try{
+    const { email, password } = req.body;
+    const user = await User.findOne({email: email});
+
+    if(!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ error: "Invalid user credentials" });
+    }
+
+    res.json({ userId: user._id, accessToken: user.accessToken });
+
+  } catch(error) {
+    res.status(500).json({ error: "Server error" });
   }
 });
 
