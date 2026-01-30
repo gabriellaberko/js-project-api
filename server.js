@@ -96,7 +96,7 @@ app.get("/thoughts", async (req, res) => {
   const thoughts = await Thought
     .find(filterCriteria)
     .sort(sortCriteria)
-    .select("-editToken") // to exclude editToken from being exposed to users
+    .select("-editToken -userId"); // to exclude editToken & userId from being exposed to users
   ;
   res.json(thoughts);
 });
@@ -104,12 +104,19 @@ app.get("/thoughts", async (req, res) => {
 
 // Post a thought
 app.post("/thoughts", async (req, res) => {
-  const message = req.body.message;
-  // Use mongoose model to create a database entry
-  const thought = new Thought({ message });
-
   try {
-    const savedThought = await thought.save();
+    const message = req.body.message;
+    const accessToken = req.headers.authorization;
+
+    const matchingUser = await User.findOne({ accessToken: accessToken });
+
+    // Use mongoose model to create a database entry
+    const newThought = new Thought({ 
+      message,
+      userId: matchingUser ? matchingUser._id : null  
+    });
+
+    const savedThought = await newThought.save();
     res.status(201).json(savedThought);
   } catch(error) {
     res.status(400).json({ message: "Failed to save thought to database", error: error.message });
