@@ -215,15 +215,10 @@ app.post("/users", async (req, res) => {
       success: true,
       message: "User created",
       id: user._id,
-      accessToken: user.accessToken
+      accessToken: user.accessToken,
+      name: user.name
     });
   } catch(error) {
-      console.error("FULL ERROR:", error);
-      console.error("ERROR NAME:", error.name);
-      console.error("ERROR MESSAGE:", error.message);
-      console.error("ERROR CODE:", error.code);
-      console.error("ERROR ERRORS:", error.errors);
-
     res.status(400).json({
       success: false,
       message: "Failed to create user", 
@@ -242,7 +237,11 @@ app.post("/sessions", async (req, res) => {
       return res.status(401).json({ error: "Invalid user credentials" });
     }
 
-    res.json({ userId: user._id, accessToken: user.accessToken });
+    res.json({ 
+      userId: user._id, 
+      accessToken: user.accessToken, 
+      name: user.name  
+    });
 
   } catch(error) {
     res.status(500).json({ error: "Server error" });
