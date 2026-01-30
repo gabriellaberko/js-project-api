@@ -18,6 +18,11 @@ const ThoughtSchema = new mongoose.Schema({
   editToken: {
     type: String,
     default: () => crypto.randomUUID()
+  },
+  // For logged-in users:
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null
   }
 });
 
