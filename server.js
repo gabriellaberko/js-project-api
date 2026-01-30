@@ -218,6 +218,12 @@ app.post("/users", async (req, res) => {
       accessToken: user.accessToken
     });
   } catch(error) {
+      console.error("FULL ERROR:", error);
+      console.error("ERROR NAME:", error.name);
+      console.error("ERROR MESSAGE:", error.message);
+      console.error("ERROR CODE:", error.code);
+      console.error("ERROR ERRORS:", error.errors);
+
     res.status(400).json({
       success: false,
       message: "Failed to create user", 

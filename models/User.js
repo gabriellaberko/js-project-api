@@ -4,16 +4,12 @@ import crypto from "crypto";
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    minlength: 2,
-    maxlength: 50
+    required: true
   },
   email: {
     type: String,
     unique: true,
-    required: true,
-    minlength: 6,
-    maxlength: 254
+    required: true
   },
   password: {
     type: String,
