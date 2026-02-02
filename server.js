@@ -33,10 +33,9 @@ app.use(express.json());
 // Middleware for authentication
 // If there is an accessToken from a logged in user in the request header, find matching user and attach it to the request
 app.use(async (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  const accessToken = req.headers.authorization;
 
-  if (authHeader) {
-    const accessToken = authHeader.accessToken;
+  if (accessToken) {
     const matchingUser = await User.findOne({ accessToken: accessToken });
     if (matchingUser) {
       req.user = matchingUser
@@ -130,20 +129,20 @@ app.get("/thoughts", async (req, res) => {
 app.post("/thoughts", async (req, res) => {
   try {
     const message = req.body.message;
-    const accessToken = req.headers.authorization;
-
-    const matchingUser = await User.findOne({ accessToken: accessToken });
 
     // Use mongoose model to create a database entry
     const newThought = new Thought({ 
       message,
-      userId: matchingUser ? matchingUser._id : null  
+      userId: req.user ? req.user._id : null  
     });
 
     const savedThought = await newThought.save();
     res.status(201).json(savedThought);
   } catch(error) {
-    res.status(400).json({ message: "Failed to save thought to database", error: error.message });
+    res.status(400).json({ 
+      message: "Failed to save thought to database", 
+      error: error.message 
+    });
   }
 });
 
