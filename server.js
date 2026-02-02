@@ -43,9 +43,8 @@ app.use(async (req, res, next) => {
       } 
     }
 
-    console.log("AUTH HEADER:", req.headers.authorization); // Remove - temporary logging
-    console.log("REQ.USER:", req.user); // Remove - temporary logging
     next();
+
   } catch(error) {
     console.error("Authentication middleware error:", error)
     next(); // Prevent blocking
@@ -120,19 +119,36 @@ app.get("/thoughts", async (req, res) => {
     .sort(sortCriteria)
     .select("-editToken -userId"); // To exclude editToken & userId from being exposed to users
   ;
+ 
+ // Remove - temporary logging:
+  thoughts.forEach(thought => {
+    console.log("thought.userId:", thought.userId);
+    console.log("req.user:", req.user);
+    console.log("req.user._id:", req.user?._id);
+    console.log(
+      "ID comparison:",
+      req.user
+        ? thought.userId?.equals(req.user._id)
+        : "failed to compare"
+    );
+  });
+
   res.json(
     thoughts.map((thought) => ({
       ...thought.toObject(), // Convert to JS object (because of Mongoose)
       isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights
     }))
   );
-  console.log("Thoughts:", thoughts); // Remove - temporary logging
 });
 
 
 // Post a thought
 app.post("/thoughts", async (req, res) => {
   try {
+
+    console.log("POST /thoughts auth header:", req.headers.authorization); // Remove - temporary logging
+    console.log("POST /thoughts req.user:", req.user); // Remove - temporary logging
+    console.log("POST req.user:", req.user); // Remove - temporary logging
     const message = req.body.message;
 
     // Use mongoose model to create a database entry
@@ -142,7 +158,6 @@ app.post("/thoughts", async (req, res) => {
     });
 
     const savedThought = await newThought.save();
-    console.log("POST req.user:", req.user); // Remove - temporary logging
 
     res.status(201).json(savedThought);
   } catch(error) {
