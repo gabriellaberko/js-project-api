@@ -87,7 +87,7 @@ app.get("/thoughts", async (req, res) => {
 
     //Filter on minimum of likes
     if (minLikes) {
-      filterCriteria.hearts.length = { $gte: Number(minLikes) }; //gte = greater than or equal to
+      filterCriteria.$expr = { $gte: [{ $size: "$hearts" }, Number(minLikes)] }; //gte = greater than or equal to
     }
 
     /* --- Functionality for sorting --- */
