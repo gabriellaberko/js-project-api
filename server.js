@@ -33,16 +33,23 @@ app.use(express.json());
 // Middleware for authentication
 // If there is an accessToken from a logged in user in the request header, find matching user and attach it to the request
 app.use(async (req, res, next) => {
-  const accessToken = req.headers.authorization;
+  try {
+    const accessToken = req.headers.authorization;
 
-  if (accessToken) {
-    const matchingUser = await User.findOne({ accessToken: accessToken });
-    if (matchingUser) {
-      req.user = matchingUser
-    } 
+    if (accessToken) {
+      const matchingUser = await User.findOne({ accessToken: accessToken });
+      if (matchingUser) {
+        req.user = matchingUser
+      } 
+    }
+
+    console.log("AUTH HEADER:", req.headers.authorization); // Remove - temporary logging
+    console.log("REQ.USER:", req.user); // Remove - temporary logging
+    next();
+  } catch(error) {
+    console.error("Authentication middleware error:", error)
+    next(); // Prevent blocking
   }
-
-  next();
 });
 
 
@@ -117,11 +124,9 @@ app.get("/thoughts", async (req, res) => {
     thoughts.map((thought) => ({
       ...thought.toObject(), // Convert to JS object (because of Mongoose)
       isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights
-    }
-
-    ))
-
+    }))
   );
+  console.log("Thoughts:", thoughts); // Remove - temporary logging
 });
 
 
@@ -137,6 +142,8 @@ app.post("/thoughts", async (req, res) => {
     });
 
     const savedThought = await newThought.save();
+    console.log("POST req.user:", req.user); // Remove - temporary logging
+
     res.status(201).json(savedThought);
   } catch(error) {
     res.status(400).json({ 
