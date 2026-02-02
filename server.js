@@ -14,17 +14,6 @@ import bcrypt from "bcrypt-nodejs";
 const port = process.env.PORT || 8080;
 const app = express();
 
-// To be used in routes that should only be accessed by authorized users
-const authenticateUser = async (req, res, next) => {
-  const user = await User.findOne({ accessToken: req.header("Authorization") });
-  if(user) {
-    req.user = user;
-    next(); // Continue on executing what comes after
-  } else {
-    res.status(401).json({ loggedOut: true });
-  }
-};
-
 
 // Add middlewares to enable cors and json body parsing
 app.use(cors());
@@ -50,6 +39,31 @@ app.use(async (req, res, next) => {
     next(); // Prevent blocking
   }
 });
+
+
+// To be used in routes that should only be accessed by authorized users
+const authenticateUser = async (req, res, next) => {
+  try { 
+    const accessToken = req.header("Authorization");
+
+    if (!accessToken) {
+      return res.status(401).json({ loggedOut: true });
+    }
+
+    const user = await User.findOne({ accessToken });
+    
+    if (!user) {
+      return res.status(401).json({ loggedOut: true });
+    }
+
+    req.user = user;
+    next(); // Continue on executing what comes after
+
+  } catch (error) {
+    console.error("Auth middleware error:", error);
+    res.status(500).json({ error: "Authentication failed" });
+  }
+};
 
 
 /* --- Error handling to check database connection --- */
