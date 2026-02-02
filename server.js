@@ -25,8 +25,13 @@ app.use(async (req, res, next) => {
   try {
     const accessToken = req.headers.authorization;
 
+    if (!accessToken) {
+      return next();
+    }
+
     if (accessToken) {
       const matchingUser = await User.findOne({ accessToken: accessToken });
+
       if (matchingUser) {
         req.user = matchingUser
       } 
@@ -42,27 +47,12 @@ app.use(async (req, res, next) => {
 
 
 // To be used in routes that should only be accessed by authorized users
-const authenticateUser = async (req, res, next) => {
-  try { 
-    const accessToken = req.header("Authorization");
+const authenticateUser = (req, res, next) => {
 
-    if (!accessToken) {
-      return res.status(401).json({ loggedOut: true });
-    }
-
-    const user = await User.findOne({ accessToken });
-    
-    if (!user) {
-      return res.status(401).json({ loggedOut: true });
-    }
-
-    req.user = user;
-    next(); // Continue on executing what comes after
-
-  } catch (error) {
-    console.error("Auth middleware error:", error);
-    res.status(500).json({ error: "Authentication failed" });
+  if (!req.user) {
+    return res.status(401).json({ loggedOut: true });
   }
+  next();
 };
 
 
@@ -97,12 +87,7 @@ app.get("/thoughts", async (req, res) => {
 
     //Filter on minimum of likes
     if (minLikes) {
-      filterCriteria.hearts = { $gte: Number(minLikes) }; //gte = greater than or equal to
-    }
-
-    // Filter from a date
-    if (fromDate) {
-      filterCriteria.createdAt = { $gte: new Date(fromDate) };
+      filterCriteria.hearts.length = { $gte: Number(minLikes) }; //gte = greater than or equal to
     }
 
     /* --- Functionality for sorting --- */
