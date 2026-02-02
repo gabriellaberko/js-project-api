@@ -30,6 +30,22 @@ const authenticateUser = async (req, res, next) => {
 app.use(cors());
 app.use(express.json());
 
+// Middleware for authentication
+// If there is an accessToken from a logged in user in the request header, find matching user and attach it to the request
+app.use(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader) {
+    const accessToken = authHeader.accessToken;
+    const matchingUser = await User.findOne({ accessToken: accessToken });
+    if (matchingUser) {
+      req.user = matchingUser
+    } 
+  }
+
+  next();
+});
+
 
 /* --- Error handling to check database connection --- */
 app.use((req, res, next) => {
@@ -96,9 +112,17 @@ app.get("/thoughts", async (req, res) => {
   const thoughts = await Thought
     .find(filterCriteria)
     .sort(sortCriteria)
-    .select("-editToken -userId"); // to exclude editToken & userId from being exposed to users
+    .select("-editToken -userId"); // To exclude editToken & userId from being exposed to users
   ;
-  res.json(thoughts);
+  res.json(
+    thoughts.map((thought) => ({
+      ...thought.toObject(), // Convert to JS object (because of Mongoose)
+      isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights
+    }
+
+    ))
+
+  );
 });
 
 
