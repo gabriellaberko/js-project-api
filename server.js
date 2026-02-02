@@ -76,21 +76,22 @@ app.get("/", (req, res) => {
 // All thoughts
 app.get("/thoughts", async (req, res) => {
   
-  /* --- Functionality for filtering --- */
+  try {
+    /* --- Functionality for filtering --- */
     const filterCriteria = {}; // To use as argument in Model.find(). Will be a criteria or empty object (thus retrieving all thoughts)
     const { fromDate, minLikes } = req.query;
 
     //Filter on minimum of likes
-    if(minLikes){
+    if (minLikes) {
       filterCriteria.hearts = { $gte: Number(minLikes) }; //gte = greater than or equal to
     }
 
     // Filter from a date
-    if(fromDate) {
-      filterCriteria.createdAt = { $gte: new Date(fromDate) }; 
+    if (fromDate) {
+      filterCriteria.createdAt = { $gte: new Date(fromDate) };
     }
 
-  /* --- Functionality for sorting --- */
+    /* --- Functionality for sorting --- */
     const sortCriteria = {};
     const { sortBy, order } = req.query;
     const sortingOrder = order === "asc" ? 1 : -1;
@@ -104,9 +105,9 @@ app.get("/thoughts", async (req, res) => {
       sort = "hearts";
     }
 
-    if(sort){
-    // Set the key-value pair in the object sortCriteria dynamically - obj[key] = value
-    sortCriteria[sort] = sortingOrder; // Set the key to the value of sort and its value to sortingOrder
+    if (sort) {
+      // Set the key-value pair in the object sortCriteria dynamically - obj[key] = value
+      sortCriteria[sort] = sortingOrder; // Set the key to the value of sort and its value to sortingOrder
       if (sort !== "createdAt") {
         sortCriteria.createdAt = -1; // Puts creation date as secondary sorting
       }
@@ -114,21 +115,25 @@ app.get("/thoughts", async (req, res) => {
       sortCriteria.createdAt = -1; // Creation date as default sorting
     }
 
-  const thoughts = await Thought
-    .find(filterCriteria)
-    .sort(sortCriteria)
-    .select("-editToken"); // To exclude editToken from being exposed to users
-  ;
+    const thoughts = await Thought
+      .find(filterCriteria)
+      .sort(sortCriteria)
+      .select("-editToken"); // To exclude editToken from being exposed to users
+    ;
 
-  const result = thoughts.map((thought) => {
-    const thoughtObj = thought.toObject(); // Convert to JS object (because of Mongoose)
-    delete thoughtObj.userId; // remove userId to be  on front-end
-    return {
-      ...thoughtObj,
-      isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights
-    }
-  });
-  res.json(result);
+    const result = thoughts.map((thought) => {
+      const thoughtObj = thought.toObject(); // Convert to JS object (because of Mongoose)
+      delete thoughtObj.userId; // remove userId to be  on front-end
+      return {
+        ...thoughtObj,
+        isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights (computed on thought and not thoughtObj that has the uderId removed)
+      }
+    });
+    res.json(result);
+  } catch (error) { 
+    console.error("GET /thoughts error:", error);
+    res.status(500).json({ message: "Failed to fetch thoughts", error: error.message });
+  }
 });
 
 
@@ -182,19 +187,17 @@ app.delete("/thoughts/id/:id", async (req, res) => {
 
 // Update the like count of a thought
 app.patch("/thoughts/id/:id/like", async (req, res) => {
-  const { id } = req.params;
-  const { hearts } = req.body;
-
-  // Error handling for invalid id input
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-  return res.status(400).json({ error: `Invalid id: ${id}` });
-  }
-
   try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) { 
+      return res.status(400).json({ error: `Invalid id: ${id}` });
+    }
+
     const updatedThought = await Thought.findByIdAndUpdate(
-      id, 
-      { hearts }, 
-      { new: true, runValidators: true} //Ensures the updated heart count gets returned, and that schema validation also is performed on the new message
+      id,
+      { $push: { hearts: { userId: req.user ? req.user._id : null } } }, //Ensures the updated heart count gets returned, and that schema validation also is performed
+      { new: true, runValidators: true }
     );
     
     // Error handling for no ID match
@@ -283,6 +286,25 @@ app.post("/sessions", async (req, res) => {
 
   } catch(error) {
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+/* --- Authenticated only routes ---*/
+
+
+// Liked thoughts
+app.get("/thoughts/liked", authenticateUser, async (req, res) => {
+  try {
+    const likedThoughts = await Thought
+    .find({ "hearts.userId": req.user._id })
+    .sort({ createdAt: -1 });
+
+  res.json(likedThoughts);
+
+  } catch (error) { 
+    console.error("GET /thoughts error:", error);
+    res.status(500).json({ message: "Failed to fetch liked thoughts", error: error.message });
   }
 });
 

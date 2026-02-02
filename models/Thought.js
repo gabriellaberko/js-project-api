@@ -7,10 +7,11 @@ const ThoughtSchema = new mongoose.Schema({
     minlength: 1,
     maxlength: 140
   },
-  hearts: {
-    type: Number,
-    default: 0
-  },
+  hearts: [
+  {
+    userId: { type: mongoose.Schema.Types.ObjectId, default: null }
+  }
+  ],
   createdAt: {
     type: Date,
     default: Date.now
