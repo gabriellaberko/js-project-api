@@ -117,38 +117,24 @@ app.get("/thoughts", async (req, res) => {
   const thoughts = await Thought
     .find(filterCriteria)
     .sort(sortCriteria)
-    .select("-editToken -userId"); // To exclude editToken & userId from being exposed to users
+    .select("-editToken"); // To exclude editToken from being exposed to users
   ;
- 
- // Remove - temporary logging:
-  thoughts.forEach(thought => {
-    console.log("thought.userId:", thought.userId);
-    console.log("req.user:", req.user);
-    console.log("req.user._id:", req.user?._id);
-    console.log(
-      "ID comparison:",
-      req.user
-        ? thought.userId?.equals(req.user._id)
-        : "failed to compare"
-    );
-  });
 
-  res.json(
-    thoughts.map((thought) => ({
-      ...thought.toObject(), // Convert to JS object (because of Mongoose)
+  const result = thoughts.map((thought) => {
+    const thoughtObj = thought.toObject(); // Convert to JS object (because of Mongoose)
+    delete thoughtObj.userId; // remove userId to be  on front-end
+    return {
+      ...thoughtObj,
       isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights
-    }))
-  );
+    }
+  });
+  res.json(result);
 });
 
 
 // Post a thought
 app.post("/thoughts", async (req, res) => {
   try {
-
-    console.log("POST /thoughts auth header:", req.headers.authorization); // Remove - temporary logging
-    console.log("POST /thoughts req.user:", req.user); // Remove - temporary logging
-    console.log("POST req.user:", req.user); // Remove - temporary logging
     const message = req.body.message;
 
     // Use mongoose model to create a database entry
