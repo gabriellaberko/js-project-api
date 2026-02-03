@@ -81,52 +81,54 @@ app.get("/", (req, res) => {
 app.get("/thoughts", async (req, res) => {
   
   try {
-    /* --- Functionality for filtering --- */
-    const filterCriteria = {}; // To use as argument in Model.find(). Will be a criteria or empty object (thus retrieving all thoughts)
-    const { fromDate, minLikes } = req.query;
+    const { minLikes, sortBy, order } = req.query;
+    const sortingOrder = order === "asc" ? 1 : -1;
 
-    //Filter on minimum of likes
+    // Variable for telling MongoDB how to prepare the data
+    const filterAndSort = [];
+
+    // Compute the like count from the hearts array, to use in the filtering
+    filterAndSort.push({
+      $addFields: {
+        likesCount: { $size: { $ifNull: ["$hearts", []] } } // Handle empty/null hearts
+      }
+    });
+
+    /* --- Functionality for filtering --- */
     if (minLikes) {
-      filterCriteria[`hearts.${Number(minLikes) - 1}`] = { $exists: true };
+      filterAndSort.push({
+        $match: { likesCount: { $gte: Number(minLikes) } } //gte = Greater than or equals to
+      });
     }
 
     /* --- Functionality for sorting --- */
     const sortCriteria = {};
-    const { sortBy, order } = req.query;
-    const sortingOrder = order === "asc" ? 1 : -1;
-
-    // Translate to keep readable query parameters in the URL
-    let sort = sortBy;
     if (sortBy === "date") {
-      sort = "createdAt";
-    }
-    if (sortBy === "likes") {
-      sort = "hearts";
-    }
-
-    if (sort) {
-      // Set the key-value pair in the object sortCriteria dynamically - obj[key] = value
-      sortCriteria[sort] = sortingOrder; // Set the key to the value of sort and its value to sortingOrder
-      if (sort !== "createdAt") {
-        sortCriteria.createdAt = -1; // Puts creation date as secondary sorting
-      }
+      sortCriteria.createdAt = sortingOrder;
+    } else if (sortBy === "likes") {
+      sortCriteria.likesCount = sortingOrder;
+      sortCriteria.createdAt = -1; // Secondary sort by date
     } else {
-      sortCriteria.createdAt = -1; // Creation date as default sorting
+      sortCriteria.createdAt = -1; // Default sorting
     }
 
-    const thoughts = await Thought
-      .find(filterCriteria)
-      .sort(sortCriteria)
-      .select("-editToken"); // To exclude editToken from being exposed to users
-    ;
+    filterAndSort.push({ $sort: sortCriteria });
+
+    /// Remove editToken to prevent it being exposed to users
+    filterAndSort.push({
+      $project: { editToken: 0 } 
+    });
+
+    /* --- Execute filter and sorting --- */
+    const thoughts = await Thought.aggregate(filterAndSort);
 
     const result = thoughts.map((thought) => {
-      const thoughtObj = thought.toObject(); // Convert to JS object (because of Mongoose)
-      delete thoughtObj.userId; // remove userId to be  on front-end
+      const isCreator = req.user && thought.userId?.equals(req.user._id);
+      delete thought.userId; // Remove userId (after isCreator is computed) to prevent it from being exposed on front-end
       return {
-        ...thoughtObj,
-        isCreator: req.user && thought.userId?.equals(req.user._id) // For determining edit rights (computed on thought and not thoughtObj that has the uderId removed)
-      }
+        ...thought,
+        isCreator
+      };
     });
     res.json(result);
   } catch (error) { 
