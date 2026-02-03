@@ -277,7 +277,9 @@ app.post("/sessions", async (req, res) => {
       return res.status(401).json({ error: "Invalid user credentials" });
     }
 
-    res.json({ 
+    res.status(200).json({ 
+      success: true,
+      message: "Login success",
       userId: user._id, 
       accessToken: user.accessToken, 
       name: user.name  

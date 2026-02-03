@@ -1,11 +1,35 @@
-# Project API
+# Happy Thoughts API 💭
 
-This project includes the packages and babel setup for an express server, and is just meant to make things a little simpler to get up and running with.
+This repository contains the backend API for Happy Thoughts, built with Node.js, Express, and MongoDB. The API handles authentication, authorization, data validation, and all CRUD operations for thoughts and users.
 
-## Getting started
+The API is fully RESTful and deployed to Render.
 
-Install dependencies with `npm install`, then start the server by running `npm run dev`
+## Live Site: https://happysharing.netlify.app/
 
-## View it live
+---
 
-Every project should be deployed somewhere. Be sure to include the link to the deployed project so that the viewer can click around and see what it's all about.
+## Features
+
+- User authentication (sign up & login)
+- Password hashing with bcrypt
+- Token-based authorization
+- Create, read, update & delete thoughts
+- Allow anonymous posting
+- Like thoughts (authenticated & anonymous)
+- Track which users liked which thoughts
+- Fetch thoughts liked by the logged-in user
+- Filtering & sorting thoughts: By date and number of likes
+- Input validation & error handling
+- Secure routes for authenticated actions only
+
+---
+
+## Tech Stack
+
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- bcrypt
+- RESTful API design
+- Render (deployment)
