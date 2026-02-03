@@ -87,7 +87,7 @@ app.get("/thoughts", async (req, res) => {
 
     //Filter on minimum of likes
     if (minLikes) {
-      filterCriteria[`hearts.${Number(minLikes) - 1}`] = { $exists: true }; //gte = greater than or equal to
+      filterCriteria[`hearts.${Number(minLikes) - 1}`] = { $exists: true };
     }
 
     /* --- Functionality for sorting --- */
@@ -246,14 +246,15 @@ app.patch("/thoughts/id/:id/message", async (req, res) => {
 app.post("/users", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    // Use mongoose model to create a database entry
     const salt = bcrypt.genSaltSync();
+
+    // Use mongoose model to create a database entry
     const user = new User({ name, email, password: bcrypt.hashSync(password, salt) });
     const savedUser = await user.save();
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: "User created",
+      message: "User created successfully",
       id: user._id,
       accessToken: user.accessToken,
       name: user.name
@@ -277,7 +278,7 @@ app.post("/sessions", async (req, res) => {
       return res.status(401).json({ error: "Invalid user credentials" });
     }
 
-    res.status(200).json({ 
+    res.json({ 
       success: true,
       message: "Login success",
       userId: user._id, 
@@ -286,7 +287,11 @@ app.post("/sessions", async (req, res) => {
     });
 
   } catch(error) {
-    res.status(500).json({ error: "Server error" });
+      res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      response: error,
+    });
   }
 });
 
